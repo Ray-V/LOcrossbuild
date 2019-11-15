@@ -16,4 +16,4 @@ or view @:
 https://ray-v.github.io/LOcrossbuild/cross-compiling-LibreOffice-for-the-RPi3.html
 
 
-Latest update 2019-10-12 for LO 6.3.2.2 release
+Latest update 2019-11-15 for 6.3.3.2
