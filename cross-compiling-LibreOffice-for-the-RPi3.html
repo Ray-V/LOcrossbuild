@@ -6,7 +6,7 @@
 
 <!-- page -->
 <style>
-body {font:14px sans;max-width: 1000px;padding:0px 10px;margin: 0 auto; /* center page */} 
+body {font:14px sans;max-width: 800px;padding:0px 10px;margin: 0 auto; /* center page */} 
 .red {background-color: #FFdddd;}
 .gray {background-color: #e7e7e7;}
 .green {background-color: #e7f5e7;}
@@ -136,14 +136,16 @@ Although this page is primarily about cross compiling LibreOffice, that is based
 <pre>/LO_build
 ├── libreoffice-x.x.x.x			build from source tarballs
 ├── external_tarballs			source archives for non-system build requirements
-└── pkg-$Arch				DESTDIR for packaging installation
+├── pkg-$Arch				DESTDIR for packaging installation
+<span class="green">└── LO-aarch64-sysroot			installation directory for HOST libs and headers</span>
+
 </pre>
 
 <p>
 With the exception of these initial downloads, the non-system sources will be downloaded during 'make'.
 <p>
 <code class="thtwo">cd /LO_build/
-export LO_VERSION=6.3.2.2
+export LO_VERSION=6.3.3.2
 </code>
 <p>
 <b>Build from tarballs</b>
@@ -158,23 +160,24 @@ wget $SRC_URL/$DIR/libreoffice-help-$LO_VERSION.tar.xz
 wget $SRC_URL/$DIR/libreoffice-translations-$LO_VERSION.tar.xz</span>)
 
 tar xf external_tarballs/libreoffice-$LO_VERSION.tar.xz
-cd libreoffice-$LO_VERSION
+
+<span class="dhash">##</span> uncompress any of the submodule tarballs now if they need patching
+<code class="thtwo">tar xf external_tarballs/libreoffice-translations-$LO_VERSION.tar.xz
+(cd libreoffice-$LO_VERSION/translations/source/en-GB/helpcontent2/source/text/scalc/
+line_no=$(grep -n "msgstr.*COLOR function" 01.po | cut -d: -f1)
+sed -i "${line_no}s|COLOR|COLOUR|" 01.po)
+
+<span class="dhash">##</span> let the build know that the submodule has been unpacked &hellip;
+mkdir -p libreoffice-$LO_VERSION/src/libreoffice-translations-$LO_VERSION
 </code>
 
-<p>
-Download and apply patch - to fix Tip-of-the-Day and other blank image displays when using gen/gtk[2] vcl plugins:
-<br>
-<code class="thtwo">(cd ../external_tarballs
-wget https://gerrit.libreoffice.org/changes/78666/revisions/7c420f4dab3dda4dcf4c605779a7751ac550a94f/patch
-base64 -d patch > 7c420f4.diff)
-
-patch -p1 &lt; ../external_tarballs/7c420f4.diff
+cd libreoffice-$LO_VERSION
 </code>
 
 <p>
 <b>Native build</b>
 <br>
-Set the configure option --host == --build
+Set the configure option --host == --build [using the autotools definition of host - the machine the compiled code will run on]
 <br>
 <code class="thtwo">export HOST=$(bash ./config.guess)
 export Arch=x86_64
@@ -213,12 +216,13 @@ cat limitx.h glimits.h limity.h > ../../include-fixed/limits.h)
 </code>
 
 <b>[2] Set up a sysroot</b> for the RPi3 libs and headers needed for the LibreOffice build.
+     <b>OR</b> skip this and just mount the USB stick containing the RPi3 installation to $SYSROOT
 
-a] My preference is to set this up in a separate directory and bind-mount it to the cross compiler sysroot directory.
+My preference is to set this up in a separate directory and bind-mount it to the cross compiler sysroot directory.
 This enables me to set up different sysroots for whatever is being cross compiled.
 
 Mount SYSROOT
-<code class="green">mount -B <span class="comment">&lt;path-to-directory-for-installing-RPi-libraries-and-headers></span> $SYSROOT
+<code class="green">mount -B /LO_build/LO-aarch64-sysroot $SYSROOT
 </code>
 <code class="green">export LIBDIRSUFFIX=64
 </code>
@@ -303,22 +307,21 @@ mv /sbin/ldconfig-bak /sbin/ldconfig
 unset ROOT
 cd -
 </code>
-<b>OR</b>
-b] .. just mount the USB stick containing the RPi3 Slarm64 installation to $SYSROOT
 
 <b>[3] Set up shell variables</b>
 
-Set <b>HOST</b> for a 64-bit [aarch64] build for the host system [that is, using the autotools definition of host - the machine the compiled code will run on]
+Set <b>HOST</b> to build for a 64-bit, aarch64, system
 <code class="green">export HOST=aarch64-linux-gnu
 export Arch=aarch64
 export STRIP=aarch64-linux-gnu-strip
 </code>
+Compiler optimizations.
 -march=armv8-a+crc is the compiler default, so just add -mtune=cortex-a53
 <code class="green">export CC="$HOST-gcc -mtune=cortex-a53"
 export CXX="$HOST-g++ -mtune=cortex-a53"
 </code>
-pkg-config needs to access the libs and headers for the host system and this sets it up to prefix $SYSROOT to the -L and -I paths in the .pc files
-Create a wrapper script, excluding coinmp which uses &lt;tuple>-pkg-config in its configure script to define paths in its source code and hence prefixes SYSROOT to those paths ..
+Create a wrapper script for pkg-config which needs to access the libs and headers for the host system. This script sets it up to prefix $SYSROOT to the -L and -I paths in the .pc files.
+Exclude coinmp which uses &lt;tuple>-pkg-config in its configure script to define paths in its source code and hence prefixes SYSROOT to those paths. This script will then run with the native PKG_CONFIG_* variables for coinmp.
 <code class="green">echo $"[[ ! \$PKG_CONFIG_PATH == *CoinUtils* ]] &amp;&amp; {
 export PKG_CONFIG_PATH=
 export PKG_CONFIG_SYSROOT_DIR=$SYSROOT
@@ -343,6 +346,7 @@ This probably increases the build time by including unnecessary modules in the b
 .../libreoffice-6.3.0.4/solenv/gbuild/LinkTarget.mk:687: *** used LinkTarget Library/libopencllo.so not defined.  Stop.
 &hellip; etc
 </code>
+The build time on a dual core 2.2GHz machine is 15+ hours for the cross compilation.
 <code class="green">mv RepositoryModule_build.mk RepositoryModule_build.mk-original
 <span class="dhash">##</span> .. delete from ..
 sed '/add_moduledirs/q' RepositoryModule_build.mk-original > RepositoryModule_build.mk
@@ -362,7 +366,9 @@ Configure options are presented this way for good visibility and inclusion in th
 <br>
 This list includes gen, gtk[2], and gtk3 vcl plugins in the build.
 <br>
-Install to $DESTDIR for packaging with prefix set to / to minimize path lengths. The prefix is set when creating the package.
+Install to $DESTDIR for packaging with prefix set to / to minimize path lengths.
+<br>
+The prefix for the installed package is set when creating the package.
 <br>
 <pre>--with-lang=en-GB    =>  includes translations submodule
 --with-help          =>  includes helpcontent2 submodule => adds en-GB to off-line help
@@ -433,6 +439,17 @@ Remove unwanted dictionaries and help files, leaving just en-GB
 rm -rf /LO_build/pkg-$Arch/lib/libreoffice/share/extensions/dict-fr
 rm -rf /LO_build/pkg-$Arch/lib/libreoffice/help/en-US
 </code>
+
+<br>
+Remove more unwanted stuff, leaving just en
+<br>
+<code class="thtwo">ls /LO_build/pkg-$Arch/lib/libreoffice/share/{autocorr/*.dat,fingerprint/*lm,numbertext/*sor} | grep -vE "en-GB|en.lm|en.sor|Roman" \
+| while read line
+do
+rm $line
+done
+</code>
+
 <br>
 Strip binaries
 <br>
@@ -448,7 +465,30 @@ cd /LO_build/pkg-$Arch/pkg
 
 makepkg -l y -c n /LO_build/libreoffice-$LO_VERSION-$Arch-1.txz
 </code>
+<hr class="comment">
+<p>
+To show Tip-of-the-Day each time LO is started,
+<br>
+run with gtk2 vcl plugin,
+<br>
+start with Calc,
+<br>
+and avoid the banners for Release Notes and Donate links which are at:
+<br>
+<code class="console">https://hub.libreoffice.org/ReleaseNotes/?LOvers=6.3&amp;LOlocale=en
+https://hub.libreoffice.org/donation/?BCP47=en-GB&amp;LOlang=en</code>
+<br>
+<code class="thtwob">sed -i 's|LastTipOfTheDayShown.*$|LastTipOfTheDayShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|;s|LastTimeDonateShown.*$|LastTimeDonateShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|' ~/.config/libreoffice/4/user/registrymodifications.xcu
 
+SAL_USE_VCLPLUGIN=gtk /opt/libreoffice/program/soffice --calc
+</code>
+<p>
+When running LO 6.3.3.2 with the gen or gtk vcl plugin, the Tip of the Day text doesn't wrap in the dialog box if the text is selectable - my preference is wrapping text &hellip;
+<br>
+Until <a class="extlink" href="https://bugs.documentfoundation.org/show_bug.cgi?id=128524">bug 128524</a> is resolved:
+<br>
+<code class="thtwob">sed -i 's|selectable">True|selectable">False|' /opt/libreoffice/share/config/soffice.cfg/cui/ui/tipofthedaydialog.ui
+</code>
 <hr class="comment">
 <span class="comment">To clone this page from Github:<br>
 <code style="font-style:italic">git clone https://github.com/Ray-V/LOcrossbuild.git
