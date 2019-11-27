@@ -126,18 +126,18 @@ color:darkred;
 <p>
 <div style="display:block;margin:auto;width:100%;max-width:600"><a class="extlink" href="https://ray-v.github.io/LO-aarch64-gui.png"><img style="display:block;margin:auto;width:100%;max-width:600;max-height:338;" alt="https://ray-v.github.io/LO-aarch64-gui.png" src="https://ray-v.github.io/LO-aarch64-gui.png"></a>... cross compiled for aarch64, running in a TDE desktop, on a RPi3.</div>
 <p>
-This build has been done on an x86_64 machine for the RPi3 running <a class="extlink" href="http://dl.fail.pp.ua/slackware/slarm64-current/">Slarm64</a> - only done for aarch64 to date.
-<br>
-The <span class="thtwo">cont</span><span class="green">ents</span> can be copied and pasted into a console allowing a step-by-step build to aid troubleshooting.
+These builds are done on an x86_64 machine for the RPi3 running Slackware arm-current [armv7_hf] or <a class="extlink" href="http://dl.fail.pp.ua/slackware/slarm64-current/">Slarm64</a> [aarch64].
 <br>
 Although this page is primarily about cross compiling LibreOffice, that is based on a native x86_64 build, which is therefore included.
-<p>
+<br>
+The <span class="thtwo">cont</span><span class="green">ents</span> can be copied and pasted into a console allowing a step-by-step build to aid troubleshooting.
+<p><br>
 <b>LO build environment</b><br>
 <pre>/LO_build
 ├── libreoffice-x.x.x.x			build from source tarballs
 ├── external_tarballs			source archives for non-system build requirements
 ├── pkg-$Arch				DESTDIR for packaging installation
-<span class="green">└── LO-aarch64-sysroot			installation directory for HOST libs and headers</span>
+<span class="green">└── LO-$Arch-sysroot			installation directory for HOST libs and headers</span>
 
 </pre>
 
@@ -145,9 +145,9 @@ Although this page is primarily about cross compiling LibreOffice, that is based
 With the exception of these initial downloads, the non-system sources will be downloaded during 'make'.
 <p>
 <code class="thtwo">cd /LO_build/
-export LO_VERSION=6.3.3.2
+export LO_VERSION=<span class="comment">6.3.3.2</span>
 </code>
-<p>
+<p><br>
 <b>Build from tarballs</b>
 <br>
 <code class="thtwo">(cd external_tarballs
@@ -174,7 +174,7 @@ mkdir -p libreoffice-$LO_VERSION/src/libreoffice-translations-$LO_VERSION
 cd libreoffice-$LO_VERSION
 </code>
 
-<p>
+<p><br>
 <b>Native build</b>
 <br>
 Set the configure option --host == --build [using the autotools definition of host - the machine the compiled code will run on]
@@ -189,10 +189,10 @@ export STRIP=strip
 <span class="tabs prefs"><a href="#LO_xcompile">Cross compiling</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;additional setting up for cross compiling for the RPi3.</span>
 <div id="LO_xcompile" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 <!-- leave this space -->
-<b>[1] Cross compiler</b>
-The toolchain used is the custom built gcc cross compiler <a class="extlink" href="https://ray-v.github.io/tde-slackbuilds/cross-compiling-TDE-for-the-RPi3.html#gcc_x">here</a>, where a RPi3 kernel headers package is also created.
+<b>The toolchain</b> used is the custom built gcc cross compiler <a class="extlink" href="https://ray-v.github.io/tde-slackbuilds/cross-compiling-TDE-for-the-RPi3.html#gcc_x">here</a>,
+   which includes some compiler optimizations, and creating a kernel headers package.
 
-This is the build setup for that cross-compiler and sysroot.
+This is the installtion tree for that cross-compiler and sysroot.
 The intention is that the cross tools are contained within one directory and can be installed/mounted only when required.
 sysroot libs and headers can be permanently installed within the cross-compiler tree or bind mounted from another media or directory.
 <pre>/opt
@@ -200,11 +200,51 @@ sysroot libs and headers can be permanently installed within the cross-compiler 
     └── sysroot 			location defined in x-tools build
 </pre>
 Set the cross tools directories
-<code class="green"><span class="dhash">##</span> for cross compiler
-export XGCC_DIR=/opt/cross-pi-gcc
-<span class="dhash">##</span> for sysroot
+<code class="green">export XGCC_DIR=/opt/cross-pi-gcc
 export SYSROOT=$XGCC_DIR/sysroot
 </code>
+
+<b>[1] Set variables</b> for an armv7 or aarch64 build.
+<code class="thtwob"><b>32-bit</b> armv7_hf
+<code class="green">export HOST=arm-linux-gnueabihf
+export Arch=armv7
+export STRIP=$HOST-strip
+<span class="dhash">##</span> arm_hf compiler optimizations are the cross compiler defaults
+export CC=$HOST-gcc
+export CXX=$HOST-g++
+export LIBDIRSUFFIX=""
+export HOST_INSTN=/LO_build/LO-$Arch-sysroot
+<span class="dhash">##</span> Slack_base = where the Slackware packages a-y directories are
+export Slack_base=<span class="comment">/path_to_Slackware_arm_current</span>
+</code>
+Error:
+<code class="console">/LO_build/libreoffice-6.3.3.2/sal/osl/unx/process_impl.cxx:108:14: error: ‘PATH_MAX’ was not declared in this scope
+&hellip; and others &hellip;</code>
+Add linux/limits.h which defines PATH_MAX:
+<code class="green">sed -i 's|limits.h>|&amp;\n#include &lt;linux/limits.h>|' {sal/osl/unx/process_impl.cxx,cppuhelper/source/findsofficepath.c,desktop/unx/source/start.c,vcl/unx/generic/fontmanager/helper.cxx,uui/source/logindlg.cxx}
+sed -i 's|MSVC|&amp;\n#include &lt;linux/limits.h>|' pyuno/source/loader/pyuno_loader.cxx
+</code>
+</code>
+<b>OR:</b>
+<code class="thtwob"><b>64-bit</b> aarch64
+<code class="green">export HOST=aarch64-linux-gnu
+export Arch=aarch64
+export STRIP=$HOST-strip
+<span class="dhash">##</span> Compiler optimizations.
+<span class="dhash">##</span> -march=armv8-a+crc is the compiler default, so just add -mtune=cortex-a53
+export CC="$HOST-gcc -mtune=cortex-a53"
+export CXX="$HOST-g++ -mtune=cortex-a53"
+export LIBDIRSUFFIX=64
+export HOST_INSTN=/LO_build/LO-$Arch-sysroot
+<span class="dhash">##</span> Slack_base = where the Slarm64 packages a-y directories are
+<span class="dhash">##</span> Download from a Slackware mirror - for example <a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">slackware.uk</a> where rsync is available.
+export Slack_base=<span class="comment">/path_to_Slarm64</span>
+</code>
+</code>
+
+
+<b>[2] Cross compiler</b>
+
 Install cross tools
 <code class="green">installpkg <span class="comment">/tmp/</span>xgcc910-glibc2.29-4.19.27_RPi_headers-*.txz
 </code>
@@ -215,23 +255,15 @@ use the work-around as detailed <a class="extlink" href="https://www.linuxquesti
 cat limitx.h glimits.h limity.h > ../../include-fixed/limits.h)
 </code>
 
-<b>[2] Set up a sysroot</b> for the RPi3 libs and headers needed for the LibreOffice build.
+
+<b>[3] Set up a sysroot</b> for the RPi3 libs and headers needed for the LibreOffice build.
      <b>OR</b> skip this and just mount the USB stick containing the RPi3 installation to $SYSROOT
 
 My preference is to set this up in a separate directory and bind-mount it to the cross compiler sysroot directory.
 This enables me to set up different sysroots for whatever is being cross compiled.
-
-Mount SYSROOT
-<code class="green">mount -B /LO_build/LO-aarch64-sysroot $SYSROOT
 </code>
-<code class="green">export LIBDIRSUFFIX=64
-</code>
-Slack_base = where the Slarm64 packages a-y directories are.
-Download from a Slackware mirror - for example <a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">slackware.uk</a> where rsync is available.
-<code class="green">export Slack_base=<span class="comment">/path_to_Slarm64_a-y_directories</span>
-</code>
-Install kernel headers and Slarm64 libs/headers
-<code class="green">export ROOT=$SYSROOT
+Install kernel headers and Slackware or Slarm64 libs/headers
+<code class="green">export ROOT=$HOST_INSTN
 installpkg <span class="comment">/tmp/</span>kernel-headers-4.19.27-RPi-arm$LIBDIRSUFFIX.txz
 
 cd $Slack_base
@@ -244,7 +276,6 @@ installpkg ap/sqlite-*.txz
 installpkg d/gcc-9.1.0-*.txz
 installpkg d/gcc-g++-9.1.0-*.txz
 installpkg d/python-2.*.txz
-<span class="dhash">##</span> python3 is required on the build system, but not the host
 installpkg l/at-spi2-atk-*.txz
 installpkg l/at-spi2-core-*.txz
 installpkg l/atk-*.txz
@@ -307,19 +338,13 @@ mv /sbin/ldconfig-bak /sbin/ldconfig
 unset ROOT
 cd -
 </code>
-
-<b>[3] Set up shell variables</b>
-
-Set <b>HOST</b> to build for a 64-bit, aarch64, system
-<code class="green">export HOST=aarch64-linux-gnu
-export Arch=aarch64
-export STRIP=aarch64-linux-gnu-strip
+Mount SYSROOT
+<code class="green">mount -B $HOST_INSTN $SYSROOT
 </code>
-Compiler optimizations.
--march=armv8-a+crc is the compiler default, so just add -mtune=cortex-a53
-<code class="green">export CC="$HOST-gcc -mtune=cortex-a53"
-export CXX="$HOST-g++ -mtune=cortex-a53"
-</code>
+
+
+<b>[4] Set up shell variables</b>
+
 Create a wrapper script for pkg-config which needs to access the libs and headers for the host system. This script sets it up to prefix $SYSROOT to the -L and -I paths in the .pc files.
 Exclude coinmp which uses &lt;tuple>-pkg-config in its configure script to define paths in its source code and hence prefixes SYSROOT to those paths. This script will then run with the native PKG_CONFIG_* variables for coinmp.
 <code class="green">echo $"[[ ! \$PKG_CONFIG_PATH == *CoinUtils* ]] &amp;&amp; {
@@ -327,55 +352,59 @@ export PKG_CONFIG_PATH=
 export PKG_CONFIG_SYSROOT_DIR=$SYSROOT
 export PKG_CONFIG_LIBDIR=$SYSROOT/usr/lib$LIBDIRSUFFIX/pkgconfig
 }
-exec pkg-config \"\$@\"" > $XGCC_DIR/bin/aarch64-linux-gnu-pkg-config
+exec pkg-config \"\$@\"" > $XGCC_DIR/bin/$HOST-pkg-config
 
-chmod 700 $XGCC_DIR/bin/aarch64-linux-gnu-pkg-config
+chmod 700 $XGCC_DIR/bin/$HOST-pkg-config
 </code>
-Ref: README.cross
-<code class="green">export PYTHON_CFLAGS=-I$SYSROOT/usr/include/python2.7
-export PYTHON_LIBS=-lpython2.7
+Ref: README.cross - set PYTHON_CFLAGS for the HOST platform
+These cross builds are done with python2 for both the BUILD and HOST platforms
+<code class="green">export PY_INC=$(python -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('INCLUDEPY'));")
+
+export PYTHON_CFLAGS=-I$SYSROOT$PY_INC
+export PYTHON_LIBS=-l$(echo $PY_INC | rev | cut -d "/" -f 1 | rev )
+<span class="appx"><span class="dhash">##</span> Check:
+echo $PYTHON_CFLAGS
+echo $PYTHON_LIBS</span>
 </code>
 Add cross tools binaries to the PATH
 <code class="green">export PATH=$XGCC_DIR/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
 </code>
 
-<b>[4]</b> Replace RepositoryModule_build.mk module list with that from RepositoryModule_host.mk.
-This probably increases the build time by including unnecessary modules in the build, but to-date I haven't found an alternative to avoid the string of errors &hellip; for example:
+
+<b>[5]</b> Replace RepositoryModule_build.mk module list with that from RepositoryModule_host.mk.
+This probably increases the build time by including unnecessary BUILD platform modules in the build, but to-date I haven't found an alternative to avoid the string of errors &hellip; for example:
 <code class="console">.../libreoffice-6.3.0.4/solenv/gbuild/ComponentTarget.mk:50: *** No LIBFILENAME set at component target: .../libreoffice-6.3.0.4/workdir_for_build/ComponentTarget/animations/source/animcore/animcore.component.  Stop.
 &hellip; and &hellip;
 .../libreoffice-6.3.0.4/solenv/gbuild/LinkTarget.mk:687: *** used LinkTarget Library/libopencllo.so not defined.  Stop.
 &hellip; etc
 </code>
 The build time on a dual core 2.2GHz machine is 15+ hours for the cross compilation.
-<code class="green">mv RepositoryModule_build.mk RepositoryModule_build.mk-original
+<code class="green">[[ ! -s RepositoryModule_build.mk-original ]] &amp;&amp; {
+mv RepositoryModule_build.mk RepositoryModule_build.mk-original
 <span class="dhash">##</span> .. delete from ..
 sed '/add_moduledirs/q' RepositoryModule_build.mk-original > RepositoryModule_build.mk
 <span class="dhash">##</span> .. print section (inclusive)
 sed -n '/accessibility/,/xmlsecurity/p' RepositoryModule_host.mk >> RepositoryModule_build.mk
 <span class="dhash">##</span> .. print from (inclusive)
 sed -n '/^))/,$p' RepositoryModule_build.mk-original >> RepositoryModule_build.mk
+}
 </code>
 
 <span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 </div></div>                                                     <!-- LO xcompile - end -->
 <p>
-<code class="thtwo">make distclean
-</code>
-<p>
 Configure options are presented this way for good visibility and inclusion in the cross compilation <i><b>--with-build-platform-configure-options</b></i> parameter, rather than in an <i><b>autogen.input</b></i> file.
 <br>
 This list includes gen, gtk[2], and gtk3 vcl plugins in the build.
 <br>
-Install to $DESTDIR for packaging with prefix set to / to minimize path lengths.
-<br>
-The prefix for the installed package is set when creating the package.
-<br>
-<pre>--with-lang=en-GB    =>  includes translations submodule
---with-help          =>  includes helpcontent2 submodule => adds en-GB to off-line help
---with-myspell-dicts =>  includes dictionaries submodule for spellcheck</pre>
-<code class="thtwo">NUMJOBS=6
+Install to $DESTDIR for packaging with prefix set to / to minimize path lengths. The prefix for the installed package is set when creating the package.
+<p>
+<code class="thtwo">NUMJOBS=6 &amp;&amp; [[ $(getconf _NPROCESSORS_ONLN) -ge 4 ]] &amp;&amp; export NUMJOBS=$[$(getconf _NPROCESSORS_ONLN)*2]
+LOCN=<span class="comment">en-GB</span>
 </code>
-<br>
+<pre>--with-lang=$LOCN    =>  includes translations submodule
+--with-help          =>  includes helpcontent2 submodule => adds $LOCN to off-line help
+--with-myspell-dicts =>  includes dictionaries submodule for spellcheck</pre>
 <code class="thtwo">export CONFIGURE_OPTS="
 --prefix=/
 --disable-postgresql-sdbc
@@ -389,8 +418,8 @@ The prefix for the installed package is set when creating the package.
 --disable-epm
 --enable-release-build
 --with-parallelism=$NUMJOBS
---with-locales=en-GB
---with-lang=en-GB
+--with-locales=$LOCN
+--with-lang=$LOCN
 --with-help
 --with-myspell-dicts
 --with-external-tar=/LO_build/external_tarballs
@@ -413,14 +442,49 @@ The build needs plenty of ram and the only way to avoid freezing the build machi
 <code class="thtwo">swapon &lt;additional-swap-partition>
 </code>
 
+<p><br>
+<b>Building</b>
+<br>
+When running ./autogen.sh &hellip;
 <p>
-<b>Build</b><br>
-When running ./autogen.sh for a native build, <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>--with-build-platform-configure-options</b></i> is ignored.
+<b><u>Native</u></b>:
 <br>
-For a cross build, <i><b>host_alias != build_alias</b></i>; the cross-compiling check will be 'yes'; and <i><b>--with-build-platform-configure-options</b></i> will be used.
-
+&hellip; <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>--with-build-platform-configure-options</b></i> is ignored.
+<p>
+<b><u>Cross</u></b>:
 <br>
-<code class="thtwo">./autogen.sh $CONFIGURE_OPTS --host=$HOST --with-build-platform-configure-options="$CONFIGURE_OPTS --without-help --without-system-dicts --disable-gtk --disable-gtk3" | tee /LO_build/autogen-log-$Arch--$(date +%h_%d_%H:%M)
+&hellip; <i><b>host_alias != build_alias</b></i>; the cross-compiling check will be 'yes'; and <i><b>--with-build-platform-configure-options</b></i> will be used, using or overriding any set for the host platform.
+<p>
+b] For an armv7 cross build, with PYTHON_CFLAGS for the HOST building environment pointing to SYSROOT, this error occurs:
+<br>
+<code class="console"> pyport.h ... #error "LONG_BIT definition appears wrong for platform (bad gcc/glibc config?)."</code>
+<span style="background-color:yellow">PYTHON_CFLAGS</span> needs to be set separately for the BUILD platform so that its headers are used - not actually required for aarch64 build, but does no harm.
+<p>
+c] <i><b>--with-build-platform-configure-options</b></i>
+<br>
+This extract is the section in ./configure which determines the options applying to the BUILD platform build.
+<br>
+They are hard-coded and override any set in CONFIGURE_OPTS and will in turn be overridden by any that follow in <i>--with-build-platform-configure-options &DoubleRightArrow; sub_conf_opts</i>
+<br>
+<code>    sub_conf_opts="$sub_conf_opts $with_build_platform_configure_options"
+    # Don't bother having configure look for stuff not needed for the build platform anyway
+    ./configure \
+        --disable-cups \
+        --disable-gstreamer-1-0 \
+        --disable-gstreamer-0-10 \
+        --disable-gtk \
+        --disable-gtk3 \
+        --disable-pdfimport \
+        --disable-postgresql-sdbc \
+        --with-parallelism="$with_parallelism" \
+        --without-doxygen \
+        --without-java \
+        $sub_conf_opts \
+        --srcdir=$srcdir \
+        2>&amp;1
+</code>
+<br>
+<code class="thtwo">./autogen.sh $CONFIGURE_OPTS --host=$HOST <span style="background-color:lightyellow"><b>--with-build-platform-configure-options</b>="$CONFIGURE_OPTS <span style="background-color:yellow">PYTHON_CFLAGS=-I$PY_INC</span> --without-help --without-system-dicts"</span> | tee /LO_build/autogen-log-$Arch--$(date +%h_%d_%H:%M)
 
 sed -i 's|check-if-root ||' Makefile
 
@@ -433,7 +497,7 @@ Install to packaging area
 <code class="thtwo">DESTDIR=/LO_build/pkg-$Arch make install | tee /LO_build/install-log-$Arch--$(date +%h_%d_%H:%M)
 </code>
 <br>
-Remove unwanted dictionaries and help files, leaving just en-GB
+Remove unwanted dictionaries and help files, leaving just $LOCN
 <br>
 <code class="thtwo">rm -rf /LO_build/pkg-$Arch/lib/libreoffice/share/extensions/dict-es
 rm -rf /LO_build/pkg-$Arch/lib/libreoffice/share/extensions/dict-fr
@@ -443,7 +507,7 @@ rm -rf /LO_build/pkg-$Arch/lib/libreoffice/help/en-US
 <br>
 Remove more unwanted stuff, leaving just en
 <br>
-<code class="thtwo">ls /LO_build/pkg-$Arch/lib/libreoffice/share/{autocorr/*.dat,fingerprint/*lm,numbertext/*sor} | grep -vE "en-GB|en.lm|en.sor|Roman" \
+<code class="thtwo">ls /LO_build/pkg-$Arch/lib/libreoffice/share/{autocorr/*.dat,fingerprint/*lm,numbertext/*sor} | grep -vE "$LOCN|en.lm|en.sor|Roman" \
 | while read line
 do
 rm $line
@@ -467,6 +531,45 @@ makepkg -l y -c n /LO_build/libreoffice-$LO_VERSION-$Arch-1.txz
 </code>
 <hr class="comment">
 <p>
+
+</code> <a name="close_LO_xcompile2"></a>                                                    <!-- LO xcompile2 - start -->
+<span class="tabs prefs"><a href="#LO_xcompile2">Cross compiling 2</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;continuing for the other arm architecture &hellip;</span>
+<div id="LO_xcompile2" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile2">close</a></span>
+<!-- leave this space -->
+The previous cross compilation builds for the BUILD platform before the HOST platform.
+<code>LO_build
+├── libreoffice-6.3.3.2
+│   ├── workdir_for_build
+    ├── workdir			# for host build
+    .
+    ├── instdir_for_build
+    ├── instdir			# for host build
+</code>
+That BUILD platform data can be retained and used for a further HOST platform build, for example build for aarch64 after an armv7 build.
+<code>x86_64 BUILD platform build &DoubleRightArrow; armv7 HOST platform build &DoubleRightArrow; armv7 package
+                            &rdsh; remove HOST data &hellip;
+                            &rdsh; aarch64 HOST platform build &DoubleRightArrow; aarch64 package
+</code>
+This can result in a significant time saving - as built here on a 2x quad-core 3GHz machine, the initial armv7 build was ~196 minutes, and by retaining the 'workdir_for_build' and the 'instdir_for_build', the build time was halved for an aarch64 build to ~103 minutes. An x86_64 native build only was ~107 minutes.
+
+<b>[1] (Re)move</b> previous host data:
+<code class="green">cd /LO_build/libreoffice-$LO_VERSION
+mv workdir workdir-$Arch
+mv instdir instdir-$Arch
+
+umount $SYSROOT
+mv $XGCC_DIR $XGCC_DIR-$Arch
+</code>
+
+<b>[2] Set up cross compile</b> for <a href="#LO_xcompile">the other architecture</a>
+and continue through to 'makepkg'
+
+<span class="tabs th2"><a href="#close_LO_xcompile2">close</a></span>
+</div></div>                                                     <!-- LO xcompile2 - end -->
+
+<hr class="comment">
+<b>Usage options</b>
+<br>
 To show Tip-of-the-Day each time LO is started,
 <br>
 run with gtk2 vcl plugin,
@@ -478,16 +581,25 @@ and avoid the banners for Release Notes and Donate links which are at:
 <code class="console">https://hub.libreoffice.org/ReleaseNotes/?LOvers=6.3&amp;LOlocale=en
 https://hub.libreoffice.org/donation/?BCP47=en-GB&amp;LOlang=en</code>
 <br>
-<code class="thtwob">sed -i 's|LastTipOfTheDayShown.*$|LastTipOfTheDayShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|;s|LastTimeDonateShown.*$|LastTimeDonateShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|' ~/.config/libreoffice/4/user/registrymodifications.xcu
+Initially, before running LO for the first time, &hellip;
+<code class="thtwo">mkdir -p ~/.config/libreoffice/4/user/
+echo '&lt;?xml version="1.0" encoding="UTF-8"?>
+&lt;oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+&lt;item oor:path="/org.openoffice.Office.Common/Misc">&lt;prop oor:name="FirstRun" oor:op="fuse">&lt;value>false&lt;/value>&lt;/prop>&lt;/item>
+&lt;item oor:path="/org.openoffice.Office.Common/Misc">&lt;prop oor:name="LastTipOfTheDayShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>
+&lt;item oor:path="/org.openoffice.Setup/Product">&lt;prop oor:name="LastTimeDonateShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>
+&lt;item oor:path="/org.openoffice.Setup/Product">&lt;prop oor:name="ooSetupLastVersion" oor:op="fuse">&lt;value>6.3&lt;/value>&lt;/prop>&lt;/item>
+&lt;/oor:items>' > ~/.config/libreoffice/4/user/registrymodifications.xcu
+</code>
+then for each new start &hellip;
+<code class="thtwo">sed -i 's|LastTipOfTheDayShown.*$|LastTipOfTheDayShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|;s|LastTimeDonateShown.*$|LastTimeDonateShown" oor:op="fuse">&lt;value>0&lt;/value>&lt;/prop>&lt;/item>|' ~/.config/libreoffice/4/user/registrymodifications.xcu
 
 SAL_USE_VCLPLUGIN=gtk /opt/libreoffice/program/soffice --calc
 </code>
 <p>
-When running LO 6.3.3.2 with the gen or gtk vcl plugin, the Tip of the Day text doesn't wrap in the dialog box if the text is selectable - my preference is wrapping text &hellip;
+When running LO 6.3.3.2 with the gen or gtk vcl plugin, the Tip of the Day text doesn't wrap in the dialog box if the text is selectable - my preference is wrapping text, so until <a class="extlink" href="https://bugs.documentfoundation.org/show_bug.cgi?id=128524">bug 128524</a> is resolved:
 <br>
-Until <a class="extlink" href="https://bugs.documentfoundation.org/show_bug.cgi?id=128524">bug 128524</a> is resolved:
-<br>
-<code class="thtwob">sed -i 's|selectable">True|selectable">False|' /opt/libreoffice/share/config/soffice.cfg/cui/ui/tipofthedaydialog.ui
+<code class="thtwo">sed -i 's|selectable">True|selectable">False|' /opt/libreoffice/share/config/soffice.cfg/cui/ui/tipofthedaydialog.ui
 </code>
 <hr class="comment">
 <span class="comment">To clone this page from Github:<br>
