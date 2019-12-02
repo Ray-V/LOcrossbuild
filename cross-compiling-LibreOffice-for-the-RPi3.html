@@ -126,21 +126,20 @@ color:darkred;
 <p>
 <div style="display:block;margin:auto;width:100%;max-width:600"><a class="extlink" href="https://ray-v.github.io/LO-aarch64-gui.png"><img style="display:block;margin:auto;width:100%;max-width:600;max-height:338;" alt="https://ray-v.github.io/LO-aarch64-gui.png" src="https://ray-v.github.io/LO-aarch64-gui.png"></a>... cross compiled for aarch64, running in a TDE desktop, on a RPi3.</div>
 <p>
-These builds are done on an x86_64 machine for the RPi3 running Slackware arm-current [armv7_hf] or <a class="extlink" href="http://dl.fail.pp.ua/slackware/slarm64-current/">Slarm64</a> [aarch64].
-<br>
-Although this page is primarily about cross compiling LibreOffice, that is based on a native x86_64 build, which is therefore included.
-<br>
-The <span class="thtwo">cont</span><span class="green">ents</span> can be copied and pasted into a console allowing a step-by-step build to aid troubleshooting.
+These builds are done on an x86_64 machine for the RPi3 running Slackware arm-current [armv7_hf] or Slarm64 [aarch64][<a class="extlink" href="https://www.linuxquestions.org/questions/slackware-arm-108/slarm64-aarch64-unofficial-slackware-4175613287/">history</a>][download from a Slackware mirror - for example <a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">slackware.uk</a> where rsync is available].
+<br style="margin:0 0 .5em 0">
+Although this page is primarily about cross compiling LibreOffice, its setup is an addition to a <span class="thtwo">native x86_64 build</span>, and so <span class="green">cross compiling</span> is shown as an addition to the native build.
+<br style="margin:0 0 .5em 0">
+There are therefore three build options - native x86_64, cross armv7 or aarch64.
+<br style="margin:0 0 .5em 0">
+The page has been laid out so that the contents can be copied and pasted into a console allowing a step-by-step build to aid troubleshooting.
 <p><br>
 <b>LO build environment</b><br>
-<pre>/LO_build
+<code>/LO_build
 ├── libreoffice-x.x.x.x			build from source tarballs
 ├── external_tarballs			source archives for non-system build requirements
 ├── pkg-$Arch				DESTDIR for packaging installation
-<span class="green">└── LO-$Arch-sysroot			installation directory for HOST libs and headers</span>
-
-</pre>
-
+<span class="green">└── LO-$Arch-sysroot			installation directory for HOST libs and headers</span></code>
 <p>
 With the exception of these initial downloads, the non-system sources will be downloaded during 'make'.
 <p>
@@ -182,11 +181,20 @@ Set the configure option --host == --build [using the autotools definition of ho
 <code class="thtwo">export HOST=$(bash ./config.guess)
 export Arch=x86_64
 export STRIP=strip
+
+<span class="dhash">##</span> <b>gcc optimization for build machine</b>, so only use if planning to run on same machine architecture
+export OPTM=$(echo $(gcc -Q -O2 -march=native --help=target | grep -E "^  -march=|^  -mtune=|^  -mfpmath=" | tr -d [:blank:]))
+
+<span class="dhash">##</span> or set manually for the intended x86_64 host machine
+<span class="dhash">##</span> export OPTM=
+
+export CC="gcc ${OPTM:-}"
+export CXX="g++ ${OPTM:-}"
 </code>
 
 <p>
-</code> <a name="close_LO_xcompile"></a>                                                    <!-- LO xcompile - start -->
-<span class="tabs prefs"><a href="#LO_xcompile">Cross compiling</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;additional setting up for cross compiling for the RPi3.</span>
+</code> <a name="close_LO_xcompile"></a>                         <!-- LO xcompile - start -->
+<span class="tabs prefs"><a href="#LO_xcompile">Cross compiling</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;setting up for cross compiling for the RPi3.</span>
 <div id="LO_xcompile" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 <!-- leave this space -->
 <b>The toolchain</b> used is the custom built gcc cross compiler <a class="extlink" href="https://ray-v.github.io/tde-slackbuilds/cross-compiling-TDE-for-the-RPi3.html#gcc_x">here</a>,
@@ -195,10 +203,9 @@ export STRIP=strip
 This is the installtion tree for that cross-compiler and sysroot.
 The intention is that the cross tools are contained within one directory and can be installed/mounted only when required.
 sysroot libs and headers can be permanently installed within the cross-compiler tree or bind mounted from another media or directory.
-<pre>/opt
+<code>/opt
 └── cross-pi-gcc			cross tools
-    └── sysroot 			location defined in x-tools build
-</pre>
+    └── sysroot 			location defined in x-tools build</code>
 Set the cross tools directories
 <code class="green">export XGCC_DIR=/opt/cross-pi-gcc
 export SYSROOT=$XGCC_DIR/sysroot
@@ -209,7 +216,7 @@ export SYSROOT=$XGCC_DIR/sysroot
 <code class="green">export HOST=arm-linux-gnueabihf
 export Arch=armv7
 export STRIP=$HOST-strip
-<span class="dhash">##</span> arm_hf compiler optimizations are the cross compiler defaults
+<span class="dhash">##</span> the cross compiler has been built with arm_hf optimizations
 export CC=$HOST-gcc
 export CXX=$HOST-g++
 export LIBDIRSUFFIX=""
@@ -218,8 +225,9 @@ export HOST_INSTN=/LO_build/LO-$Arch-sysroot
 export Slack_base=<span class="comment">/path_to_Slackware_arm_current</span>
 </code>
 Error:
-<code class="console">/LO_build/libreoffice-6.3.3.2/sal/osl/unx/process_impl.cxx:108:14: error: ‘PATH_MAX’ was not declared in this scope
-&hellip; and others &hellip;</code>
+<code class="console">/LO_build/libreoffice-6.3.3.2/sal/osl/unx/process_impl.cxx:108:14: error: ‘PATH_MAX’ was not declared in this scope</code>
+&hellip; and others &hellip;
+
 Add linux/limits.h which defines PATH_MAX:
 <code class="green">sed -i 's|limits.h>|&amp;\n#include &lt;linux/limits.h>|' {sal/osl/unx/process_impl.cxx,cppuhelper/source/findsofficepath.c,desktop/unx/source/start.c,vcl/unx/generic/fontmanager/helper.cxx,uui/source/logindlg.cxx}
 sed -i 's|MSVC|&amp;\n#include &lt;linux/limits.h>|' pyuno/source/loader/pyuno_loader.cxx
@@ -230,14 +238,12 @@ sed -i 's|MSVC|&amp;\n#include &lt;linux/limits.h>|' pyuno/source/loader/pyuno_l
 <code class="green">export HOST=aarch64-linux-gnu
 export Arch=aarch64
 export STRIP=$HOST-strip
-<span class="dhash">##</span> Compiler optimizations.
-<span class="dhash">##</span> -march=armv8-a+crc is the compiler default, so just add -mtune=cortex-a53
+<span class="dhash">##</span> -march=armv8-a+crc is the default compiler optimization, so just add -mtune=cortex-a53
 export CC="$HOST-gcc -mtune=cortex-a53"
 export CXX="$HOST-g++ -mtune=cortex-a53"
 export LIBDIRSUFFIX=64
 export HOST_INSTN=/LO_build/LO-$Arch-sysroot
 <span class="dhash">##</span> Slack_base = where the Slarm64 packages a-y directories are
-<span class="dhash">##</span> Download from a Slackware mirror - for example <a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">slackware.uk</a> where rsync is available.
 export Slack_base=<span class="comment">/path_to_Slarm64</span>
 </code>
 </code>
@@ -250,7 +256,7 @@ Install cross tools
 </code>
 To avoid any issues with the different limits.h priorities producing this error:
 <code class="console">.../include/bits/stdlib.h:90:3: error: #error "Assumed value of MB_LEN_MAX wrong"</code>
-use the work-around as detailed <a class="extlink" href="https://www.linuxquestions.org/questions/linux-software-2/tar-cross-compile-error-arm-linux-gnueabi-4175642648/">here</a>.
+use the work-around as detailed <a class="extlink" href="https://www.linuxquestions.org/questions/linux-software-2/tar-cross-compile-error-arm-linux-gnueabi-4175642648/#post5929952">here</a>.
 <code class="green">(cd $XGCC_DIR/lib/gcc/*-linux-gnu*/9.?.0/plugin/include/
 cat limitx.h glimits.h limity.h > ../../include-fixed/limits.h)
 </code>
@@ -276,6 +282,7 @@ installpkg ap/sqlite-*.txz
 installpkg d/gcc-9.1.0-*.txz
 installpkg d/gcc-g++-9.1.0-*.txz
 installpkg d/python-2.*.txz
+installpkg d/python3-*.txz
 installpkg l/at-spi2-atk-*.txz
 installpkg l/at-spi2-core-*.txz
 installpkg l/atk-*.txz
@@ -338,13 +345,12 @@ mv /sbin/ldconfig-bak /sbin/ldconfig
 unset ROOT
 cd -
 </code>
-Mount SYSROOT
+Mount to SYSROOT
 <code class="green">mount -B $HOST_INSTN $SYSROOT
 </code>
 
 
 <b>[4] Set up shell variables</b>
-
 Create a wrapper script for pkg-config which needs to access the libs and headers for the host system. This script sets it up to prefix $SYSROOT to the -L and -I paths in the .pc files.
 Exclude coinmp which uses &lt;tuple>-pkg-config in its configure script to define paths in its source code and hence prefixes SYSROOT to those paths. This script will then run with the native PKG_CONFIG_* variables for coinmp.
 <code class="green">echo $"[[ ! \$PKG_CONFIG_PATH == *CoinUtils* ]] &amp;&amp; {
@@ -356,8 +362,7 @@ exec pkg-config \"\$@\"" > $XGCC_DIR/bin/$HOST-pkg-config
 
 chmod 700 $XGCC_DIR/bin/$HOST-pkg-config
 </code>
-Ref: README.cross - set PYTHON_CFLAGS for the HOST platform
-These cross builds are done with python2 for both the BUILD and HOST platforms
+Ref: README.cross - set PYTHON_CFLAGS [Python2]
 <code class="green">export PY_INC=$(python -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('INCLUDEPY'));")
 
 export PYTHON_CFLAGS=-I$SYSROOT$PY_INC
@@ -379,6 +384,7 @@ This probably increases the build time by including unnecessary BUILD platform m
 &hellip; etc
 </code>
 The build time on a dual core 2.2GHz machine is 15+ hours for the cross compilation.
+Test for this having been done already if this is a second build
 <code class="green">[[ ! -s RepositoryModule_build.mk-original ]] &amp;&amp; {
 mv RepositoryModule_build.mk RepositoryModule_build.mk-original
 <span class="dhash">##</span> .. delete from ..
@@ -390,10 +396,12 @@ sed -n '/^))/,$p' RepositoryModule_build.mk-original >> RepositoryModule_build.m
 }
 </code>
 
+<li>To cross compile for the other ARM architecture after this build, see <a href="#LO_xcompile2"><span class="thtwob">Cross compiling 2</span></a></li>
+
 <span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 </div></div>                                                     <!-- LO xcompile - end -->
 <p>
-Configure options are presented this way for good visibility and inclusion in the cross compilation <i><b>--with-build-platform-configure-options</b></i> parameter, rather than in an <i><b>autogen.input</b></i> file.
+Configure options are presented this way for visibility and inclusion in the cross compilation <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> parameter, rather than in an <i><b>autogen.input</b></i> file.
 <br>
 This list includes gen, gtk[2], and gtk3 vcl plugins in the build.
 <br>
@@ -402,9 +410,9 @@ Install to $DESTDIR for packaging with prefix set to / to minimize path lengths.
 <code class="thtwo">NUMJOBS=6 &amp;&amp; [[ $(getconf _NPROCESSORS_ONLN) -ge 4 ]] &amp;&amp; export NUMJOBS=$[$(getconf _NPROCESSORS_ONLN)*2]
 LOCN=<span class="comment">en-GB</span>
 </code>
-<pre>--with-lang=$LOCN    =>  includes translations submodule
+<code>--with-lang=$LOCN    =>  includes translations submodule
 --with-help          =>  includes helpcontent2 submodule => adds $LOCN to off-line help
---with-myspell-dicts =>  includes dictionaries submodule for spellcheck</pre>
+--with-myspell-dicts =>  includes dictionaries submodule for spellcheck</code>
 <code class="thtwo">export CONFIGURE_OPTS="
 --prefix=/
 --disable-postgresql-sdbc
@@ -449,22 +457,22 @@ When running ./autogen.sh &hellip;
 <p>
 <b><u>Native</u></b>:
 <br>
-&hellip; <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>--with-build-platform-configure-options</b></i> is ignored.
+&hellip; <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> is ignored.
 <p>
 <b><u>Cross</u></b>:
 <br>
-&hellip; <i><b>host_alias != build_alias</b></i>; the cross-compiling check will be 'yes'; and <i><b>--with-build-platform-configure-options</b></i> will be used, using or overriding any set for the host platform.
+&hellip; <i><b>host_alias != build_alias</b></i>; the cross-compiling check will be 'yes'; and <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> will be used, using or overriding any set for the host platform.
 <p>
 b] For an armv7 cross build, with PYTHON_CFLAGS for the HOST building environment pointing to SYSROOT, this error occurs:
 <br>
 <code class="console"> pyport.h ... #error "LONG_BIT definition appears wrong for platform (bad gcc/glibc config?)."</code>
-<span style="background-color:yellow">PYTHON_CFLAGS</span> needs to be set separately for the BUILD platform so that its headers are used - not actually required for aarch64 build, but does no harm.
+<span style="background-color:#FFe0ef">PYTHON_CFLAGS</span> needs to be set separately for the BUILD platform so that its headers are used - not actually required for aarch64 build, but does no harm.
 <p>
-c] <i><b>--with-build-platform-configure-options</b></i>
+c] <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i>
 <br>
 This extract is the section in ./configure which determines the options applying to the BUILD platform build.
 <br>
-They are hard-coded and override any set in CONFIGURE_OPTS and will in turn be overridden by any that follow in <i>--with-build-platform-configure-options &DoubleRightArrow; sub_conf_opts</i>
+They are hard-coded and override any set in CONFIGURE_OPTS and will in turn be overridden by any that follow in <i>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options &DoubleRightArrow; sub_conf_opts</i>
 <br>
 <code>    sub_conf_opts="$sub_conf_opts $with_build_platform_configure_options"
     # Don't bother having configure look for stuff not needed for the build platform anyway
@@ -484,7 +492,7 @@ They are hard-coded and override any set in CONFIGURE_OPTS and will in turn be o
         2>&amp;1
 </code>
 <br>
-<code class="thtwo">./autogen.sh $CONFIGURE_OPTS --host=$HOST <span style="background-color:lightyellow"><b>--with-build-platform-configure-options</b>="$CONFIGURE_OPTS <span style="background-color:yellow">PYTHON_CFLAGS=-I$PY_INC</span> --without-help --without-system-dicts"</span> | tee /LO_build/autogen-log-$Arch--$(date +%h_%d_%H:%M)
+<code class="thtwo">./autogen.sh $CONFIGURE_OPTS --host=$HOST <span style="background-color:#fff0f3"><b>--with-build-platform-configure-options</b>="$CONFIGURE_OPTS <span style="background-color:#FFe0e5">PYTHON_CFLAGS=-I$PY_INC</span> --without-help --without-system-dicts"</span> | tee /LO_build/autogen-log-$Arch--$(date +%h_%d_%H:%M)
 
 sed -i 's|check-if-root ||' Makefile
 
@@ -529,14 +537,14 @@ cd /LO_build/pkg-$Arch/pkg
 
 makepkg -l y -c n /LO_build/libreoffice-$LO_VERSION-$Arch-1.txz
 </code>
-<hr class="comment">
-<p>
 
-</code> <a name="close_LO_xcompile2"></a>                                                    <!-- LO xcompile2 - start -->
+<p><br>
+
+</code> <a name="close_LO_xcompile2"></a>                        <!-- LO xcompile2 - start -->
 <span class="tabs prefs"><a href="#LO_xcompile2">Cross compiling 2</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;continuing for the other arm architecture &hellip;</span>
 <div id="LO_xcompile2" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile2">close</a></span>
 <!-- leave this space -->
-The previous cross compilation builds for the BUILD platform before the HOST platform.
+The cross compilation builds for the BUILD platform as well as the HOST platform.
 <code>LO_build
 ├── libreoffice-6.3.3.2
 │   ├── workdir_for_build
@@ -545,12 +553,12 @@ The previous cross compilation builds for the BUILD platform before the HOST pla
     ├── instdir_for_build
     ├── instdir			# for host build
 </code>
-That BUILD platform data can be retained and used for a further HOST platform build, for example build for aarch64 after an armv7 build.
+That BUILD platform data can be used for a further HOST platform build, for example build for aarch64 after an armv7 build.
 <code>x86_64 BUILD platform build &DoubleRightArrow; armv7 HOST platform build &DoubleRightArrow; armv7 package
                             &rdsh; remove HOST data &hellip;
                             &rdsh; aarch64 HOST platform build &DoubleRightArrow; aarch64 package
 </code>
-This can result in a significant time saving - as built here on a 2x quad-core 3GHz machine, the initial armv7 build was ~196 minutes, and by retaining the 'workdir_for_build' and the 'instdir_for_build', the build time was halved for an aarch64 build to ~103 minutes. An x86_64 native build only was ~107 minutes.
+This can result in a significant time saving - built on a 2x quad-core 3GHz machine, the initial armv7 build was ~196 minutes, and by retaining the 'workdir_for_build' and the 'instdir_for_build', the build time was halved for an aarch64 build to ~103 minutes. An x86_64 native only build was ~107 minutes.
 
 <b>[1] (Re)move</b> previous host data:
 <code class="green">cd /LO_build/libreoffice-$LO_VERSION
