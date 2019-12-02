@@ -16,4 +16,4 @@ or view @:
 https://ray-v.github.io/LOcrossbuild/cross-compiling-LibreOffice-for-the-RPi3.html
 
 
-Latest update 2019-11-27 for armv7 build
+Latest update 2019-12-02 adding native build compiler optimization option
