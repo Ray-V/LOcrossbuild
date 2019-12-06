@@ -16,4 +16,4 @@ or view @:
 https://ray-v.github.io/LOcrossbuild/cross-compiling-LibreOffice-for-the-RPi3.html
 
 
-Latest update 2019-12-02 adding native build compiler optimization option
+Updated 2019-12-06 adding i686 cross compilation option
