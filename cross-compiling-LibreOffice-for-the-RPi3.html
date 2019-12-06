@@ -126,11 +126,11 @@ color:darkred;
 <p>
 <div style="display:block;margin:auto;width:100%;max-width:600"><a class="extlink" href="https://ray-v.github.io/LO-aarch64-gui.png"><img style="display:block;margin:auto;width:100%;max-width:600;max-height:338;" alt="https://ray-v.github.io/LO-aarch64-gui.png" src="https://ray-v.github.io/LO-aarch64-gui.png"></a>... cross compiled for aarch64, running in a TDE desktop, on a RPi3.</div>
 <p>
-These builds are done on an x86_64 machine for the RPi3 running Slackware arm-current [armv7_hf] or Slarm64 [aarch64][<a class="extlink" href="https://www.linuxquestions.org/questions/slackware-arm-108/slarm64-aarch64-unofficial-slackware-4175613287/">history</a>][download from a Slackware mirror - for example <a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">slackware.uk</a> where rsync is available].
+These builds are done on an x86_64 machine for the RPi3 running Slackware arm-current [armv7_hf] or Slarm64 [aarch64][<a class="extlink" href="https://www.linuxquestions.org/questions/slackware-arm-108/slarm64-aarch64-unofficial-slackware-4175613287/">history</a>][<a class="extlink" href="https://slackware.uk/slarm64/slarm64-current/slarm64/">download from a Slackware mirror</a> - for example slackware.uk where rsync is available].
 <br style="margin:0 0 .5em 0">
-Although this page is primarily about cross compiling LibreOffice, its setup is an addition to a <span class="thtwo">native x86_64 build</span>, and so <span class="green">cross compiling</span> is shown as an addition to the native build.
+Although this page is primarily about cross compiling LibreOffice for the RPi3, that setup is an addition to a <span class="thtwo">native&nbsp;x86_64&nbsp;build</span>, and so <span class="green">cross&nbsp;compiling</span> is shown as an addition to the native build. An i686 cross build option is included as it's an identical setup to the arm cross builds.
 <br style="margin:0 0 .5em 0">
-There are therefore three build options - native x86_64, cross armv7 or aarch64.
+There are therefore four build options - native x86_64; cross armv7, aarch64, or i686.
 <br style="margin:0 0 .5em 0">
 The page has been laid out so that the contents can be copied and pasted into a console allowing a step-by-step build to aid troubleshooting.
 <p><br>
@@ -149,6 +149,8 @@ export LO_VERSION=<span class="comment">6.3.3.2</span>
 <p><br>
 <b>Build from tarballs</b>
 <br>
+&nbsp;&nbsp;download
+<br>
 <code class="thtwo">(cd external_tarballs
 SRC_URL=https://download.documentfoundation.org/libreoffice/src
 DIR=$(echo $LO_VERSION | cut -d "." -f1-3)
@@ -157,11 +159,16 @@ DIR=$(echo $LO_VERSION | cut -d "." -f1-3)
 wget $SRC_URL/$DIR/libreoffice-dictionaries-$LO_VERSION.tar.xz
 wget $SRC_URL/$DIR/libreoffice-help-$LO_VERSION.tar.xz
 wget $SRC_URL/$DIR/libreoffice-translations-$LO_VERSION.tar.xz</span>)
+</code>
+<br>
+&nbsp;&nbsp;extract
+<br>
+<code class="thtwo">tar xf external_tarballs/libreoffice-$LO_VERSION.tar.xz
 
-tar xf external_tarballs/libreoffice-$LO_VERSION.tar.xz
-
-<span class="dhash">##</span> uncompress any of the submodule tarballs now if they need patching
+<span class="dhash">##</span> uncompress any of the submodule tarballs now if they need patching - for example:
 <code class="thtwo">tar xf external_tarballs/libreoffice-translations-$LO_VERSION.tar.xz
+
+<span class="dhash">##</span> apply patch
 (cd libreoffice-$LO_VERSION/translations/source/en-GB/helpcontent2/source/text/scalc/
 line_no=$(grep -n "msgstr.*COLOR function" 01.po | cut -d: -f1)
 sed -i "${line_no}s|COLOR|COLOUR|" 01.po)
@@ -174,18 +181,20 @@ cd libreoffice-$LO_VERSION
 </code>
 
 <p><br>
-<b>Native build</b>
+<b>Native build</b> - variables will be overwritten if cross compiling
 <br>
 Set the configure option --host == --build [using the autotools definition of host - the machine the compiled code will run on]
 <br>
 <code class="thtwo">export HOST=$(bash ./config.guess)
 export Arch=x86_64
 export STRIP=strip
-
-<span class="dhash">##</span> <b>gcc optimization for build machine</b>, so only use if planning to run on same machine architecture
+</code>
+<br>
+Gcc optimization
+<code class="thtwo"><span class="dhash">##</span> for build machine, for native x86_64 or cross i686 builds, for LO to run on same machine architecture
 export OPTM=$(echo $(gcc -Q -O2 -march=native --help=target | grep -E "^  -march=|^  -mtune=|^  -mfpmath=" | tr -d [:blank:]))
 
-<span class="dhash">##</span> or set manually for the intended x86_64 host machine
+<span class="dhash">##</span> or set manually for the intended x86 host machine
 <span class="dhash">##</span> export OPTM=
 
 export CC="gcc ${OPTM:-}"
@@ -194,7 +203,7 @@ export CXX="g++ ${OPTM:-}"
 
 <p>
 </code> <a name="close_LO_xcompile"></a>                         <!-- LO xcompile - start -->
-<span class="tabs prefs"><a href="#LO_xcompile">Cross compiling</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;setting up for cross compiling for the RPi3.</span>
+<span class="tabs prefs"><a href="#LO_xcompile">Cross compiling</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;setting up for cross compiling</span>
 <div id="LO_xcompile" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 <!-- leave this space -->
 <b>The toolchain</b> used is the custom built gcc cross compiler <a class="extlink" href="https://ray-v.github.io/tde-slackbuilds/cross-compiling-TDE-for-the-RPi3.html#gcc_x">here</a>,
@@ -211,7 +220,7 @@ Set the cross tools directories
 export SYSROOT=$XGCC_DIR/sysroot
 </code>
 
-<b>[1] Set variables</b> for an armv7 or aarch64 build.
+<b>[1] Set variables</b> for an armv7, aarch64, or i686 build.
 <code class="thtwob"><b>32-bit</b> armv7_hf
 <code class="green">export HOST=arm-linux-gnueabihf
 export Arch=armv7
@@ -220,7 +229,6 @@ export STRIP=$HOST-strip
 export CC=$HOST-gcc
 export CXX=$HOST-g++
 export LIBDIRSUFFIX=""
-export HOST_INSTN=/LO_build/LO-$Arch-sysroot
 <span class="dhash">##</span> Slack_base = where the Slackware packages a-y directories are
 export Slack_base=<span class="comment">/path_to_Slackware_arm_current</span>
 </code>
@@ -242,9 +250,22 @@ export STRIP=$HOST-strip
 export CC="$HOST-gcc -mtune=cortex-a53"
 export CXX="$HOST-g++ -mtune=cortex-a53"
 export LIBDIRSUFFIX=64
-export HOST_INSTN=/LO_build/LO-$Arch-sysroot
 <span class="dhash">##</span> Slack_base = where the Slarm64 packages a-y directories are
 export Slack_base=<span class="comment">/path_to_Slarm64</span>
+</code>
+</code>
+<b>OR:</b>
+<code class="thtwob"><b>32-bit</b> x86 - i686
+<code class="green">export HOST=i686-linux-gnu
+export Arch=i686
+export STRIP=$HOST-strip
+export CC="$HOST-gcc ${OPTM:-}"
+export CXX="$HOST-g++ ${OPTM:-}"
+export LIBDIRSUFFIX=""
+<span class="dhash">##</span> build can't find 'libssp.so.0', which Slackware doesn't include
+export LD_LIBRARY_PATH=$XGCC_DIR/$HOST/lib
+<span class="dhash">##</span> Slack_base = where the Slackware packages a-y directories are
+export Slack_base=<span class="comment">/path_to_Slackware32_current</span>
 </code>
 </code>
 
@@ -252,25 +273,29 @@ export Slack_base=<span class="comment">/path_to_Slarm64</span>
 <b>[2] Cross compiler</b>
 
 Install cross tools
-<code class="green">installpkg <span class="comment">/tmp/</span>xgcc910-glibc2.29-4.19.27_RPi_headers-*.txz
+<code class="green">installpkg <span class="comment">/tmp/</span>xgcc910-glibc2.29-<span class="comment">&lt;for_Arch></span>.txz
 </code>
 To avoid any issues with the different limits.h priorities producing this error:
 <code class="console">.../include/bits/stdlib.h:90:3: error: #error "Assumed value of MB_LEN_MAX wrong"</code>
 use the work-around as detailed <a class="extlink" href="https://www.linuxquestions.org/questions/linux-software-2/tar-cross-compile-error-arm-linux-gnueabi-4175642648/#post5929952">here</a>.
-<code class="green">(cd $XGCC_DIR/lib/gcc/*-linux-gnu*/9.?.0/plugin/include/
+<code class="green">(cd $XGCC_DIR/lib/gcc/*-linux-gnu*/9.1.0/plugin/include/
 cat limitx.h glimits.h limity.h > ../../include-fixed/limits.h)
 </code>
 
+Location of installed HOST libs and headers
+<code class="green">export HOST_INSTN=/LO_build/LO-$Arch-sysroot
+</code>
 
-<b>[3] Set up a sysroot</b> for the RPi3 libs and headers needed for the LibreOffice build.
-     <b>OR</b> skip this and just mount the USB stick containing the RPi3 installation to $SYSROOT
+
+<b>[3] Set up a sysroot</b> for the HOST libs and headers needed for the LibreOffice build.
+     <b>OR</b> skip this and just mount the media containing the HOST installation to $SYSROOT
 
 My preference is to set this up in a separate directory and bind-mount it to the cross compiler sysroot directory.
 This enables me to set up different sysroots for whatever is being cross compiled.
 </code>
-Install kernel headers and Slackware or Slarm64 libs/headers
+Install kernel headers and Slackware or Slarm64 libs/headers to a <i>HOST_installation directory</i>
 <code class="green">export ROOT=$HOST_INSTN
-installpkg <span class="comment">/tmp/</span>kernel-headers-4.19.27-RPi-arm$LIBDIRSUFFIX.txz
+installpkg <span class="comment">/tmp/</span>kernel-headers-<span class="comment">&lt;for_Arch></span>.txz
 
 cd $Slack_base
 installpkg a/bzip2-*.txz
@@ -345,12 +370,14 @@ mv /sbin/ldconfig-bak /sbin/ldconfig
 unset ROOT
 cd -
 </code>
-Mount to SYSROOT
+
+
+<b>[4]</b> Mount HOST_installation directory to SYSROOT
 <code class="green">mount -B $HOST_INSTN $SYSROOT
 </code>
 
 
-<b>[4] Set up shell variables</b>
+<b>[5] Set up shell variables</b>
 Create a wrapper script for pkg-config which needs to access the libs and headers for the host system. This script sets it up to prefix $SYSROOT to the -L and -I paths in the .pc files.
 Exclude coinmp which uses &lt;tuple>-pkg-config in its configure script to define paths in its source code and hence prefixes SYSROOT to those paths. This script will then run with the native PKG_CONFIG_* variables for coinmp.
 <code class="green">echo $"[[ ! \$PKG_CONFIG_PATH == *CoinUtils* ]] &amp;&amp; {
@@ -376,16 +403,16 @@ Add cross tools binaries to the PATH
 </code>
 
 
-<b>[5]</b> Replace RepositoryModule_build.mk module list with that from RepositoryModule_host.mk.
-This probably increases the build time by including unnecessary BUILD platform modules in the build, but to-date I haven't found an alternative to avoid the string of errors &hellip; for example:
-<code class="console">.../libreoffice-6.3.0.4/solenv/gbuild/ComponentTarget.mk:50: *** No LIBFILENAME set at component target: .../libreoffice-6.3.0.4/workdir_for_build/ComponentTarget/animations/source/animcore/animcore.component.  Stop.
+<b>[6]</b> Replace RepositoryModule_build.mk module list with that from RepositoryModule_host.mk.
+This probably increases the build time by including unnecessary BUILD platform modules in the build, but to-date I haven't found an alternative to avoid the string of errors, for example:
+<code class="console">.../libreoffice-6.3.0.4/solenv/gbuild/ComponentTarget.mk:50: *** No LIBFILENAME set at component target: .../libreoffice-6.3.0.4/workdir_for_build/ComponentTarget/animations/source/animcore/animcore.component.  Stop.</code>
 &hellip; and &hellip;
-.../libreoffice-6.3.0.4/solenv/gbuild/LinkTarget.mk:687: *** used LinkTarget Library/libopencllo.so not defined.  Stop.
-&hellip; etc
-</code>
+<code class="console">.../libreoffice-6.3.0.4/solenv/gbuild/LinkTarget.mk:687: *** used LinkTarget Library/libopencllo.so not defined.  Stop.</code>
+etc &hellip;
+
 The build time on a dual core 2.2GHz machine is 15+ hours for the cross compilation.
-Test for this having been done already if this is a second build
-<code class="green">[[ ! -s RepositoryModule_build.mk-original ]] &amp;&amp; {
+<code class="green"><span class="dhash">##</span> Test for this having been done already if this is a second build:
+[[ ! -s RepositoryModule_build.mk-original ]] &amp;&amp; {
 mv RepositoryModule_build.mk RepositoryModule_build.mk-original
 <span class="dhash">##</span> .. delete from ..
 sed '/add_moduledirs/q' RepositoryModule_build.mk-original > RepositoryModule_build.mk
@@ -396,16 +423,14 @@ sed -n '/^))/,$p' RepositoryModule_build.mk-original >> RepositoryModule_build.m
 }
 </code>
 
-<li>To cross compile for the other ARM architecture after this build, see <a href="#LO_xcompile2"><span class="thtwob">Cross compiling 2</span></a></li>
+<li>To cross compile for the other architectures after this build, see <a href="#LO_xcompile2"><span class="thtwob">Cross compiling 2</span></a></li>
 
 <span class="tabs th2"><a href="#close_LO_xcompile">close</a></span>
 </div></div>                                                     <!-- LO xcompile - end -->
 <p>
-Configure options are presented this way for visibility and inclusion in the cross compilation <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> parameter, rather than in an <i><b>autogen.input</b></i> file.
+Configure options are set with <i>CONFIGURE_OPTS</i>, rather than in an <i>autogen.input</i> file, for inclusion in the cross compilation <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> parameter. The vcl plugins gen, gtk[2], and gtk3 are included in the build.
 <br>
-This list includes gen, gtk[2], and gtk3 vcl plugins in the build.
-<br>
-Install to $DESTDIR for packaging with prefix set to / to minimize path lengths. The prefix for the installed package is set when creating the package.
+Installation is to $DESTDIR for packaging where the prefix for the installed package is set.
 <p>
 <code class="thtwo">NUMJOBS=6 &amp;&amp; [[ $(getconf _NPROCESSORS_ONLN) -ge 4 ]] &amp;&amp; export NUMJOBS=$[$(getconf _NPROCESSORS_ONLN)*2]
 LOCN=<span class="comment">en-GB</span>
@@ -445,7 +470,7 @@ Patch for error:
 <code class="thtwo">sed -i '/mysqlc/d ' RepositoryModule_build.mk
 </code>
 <p>
-The build needs plenty of ram and the only way to avoid freezing the build machine may be to enable an additional chunk of swap ..
+The build needs plenty of ram and the only way to avoid freezing the build machine may be to enable an additional chunk of swap &hellip;
 <br>
 <code class="thtwo">swapon &lt;additional-swap-partition>
 </code>
@@ -457,7 +482,7 @@ When running ./autogen.sh &hellip;
 <p>
 <b><u>Native</u></b>:
 <br>
-&hellip; <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> is ignored.
+&hellip; <i><b>host_alias == build_alias</b></i>, which is set by config.guess; the cross-compiling check will be 'no'; and <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i> will be ignored.
 <p>
 <b><u>Cross</u></b>:
 <br>
@@ -466,7 +491,7 @@ When running ./autogen.sh &hellip;
 b] For an armv7 cross build, with PYTHON_CFLAGS for the HOST building environment pointing to SYSROOT, this error occurs:
 <br>
 <code class="console"> pyport.h ... #error "LONG_BIT definition appears wrong for platform (bad gcc/glibc config?)."</code>
-<span style="background-color:#FFe0ef">PYTHON_CFLAGS</span> needs to be set separately for the BUILD platform so that its headers are used - not actually required for aarch64 build, but does no harm.
+<span style="background-color:#FFe0ef">PYTHON_CFLAGS</span> needs to be set separately for the BUILD platform headers.
 <p>
 c] <i><b>-&NoBreak;-&NoBreak;with-&NoBreak;build-&NoBreak;platform-&NoBreak;configure-&NoBreak;options</b></i>
 <br>
@@ -535,17 +560,19 @@ Create package to install to /opt/libreoffice
 mv /LO_build/pkg-$Arch/lib/libreoffice /LO_build/pkg-$Arch/pkg/opt
 cd /LO_build/pkg-$Arch/pkg
 
+[[ $Arch == i686 ]] &amp;&amp; cp $XGCC_DIR/$HOST/lib/libssp.so.0.0.0 opt/libreoffice/program/libssp.so.0
+
 makepkg -l y -c n /LO_build/libreoffice-$LO_VERSION-$Arch-1.txz
 </code>
 
 <p><br>
 
 </code> <a name="close_LO_xcompile2"></a>                        <!-- LO xcompile2 - start -->
-<span class="tabs prefs"><a href="#LO_xcompile2">Cross compiling 2</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;continuing for the other arm architecture &hellip;</span>
+<span class="tabs prefs"><a href="#LO_xcompile2">Cross compiling 2</a></span><span style="vertical-align:-30%">&nbsp;&nbsp;continuing for the other architectures &hellip;</span>
 <div id="LO_xcompile2" class="tab"><div class="b_prefs"><span class="tabs th2"><a href="#close_LO_xcompile2">close</a></span>
 <!-- leave this space -->
 The cross compilation builds for the BUILD platform as well as the HOST platform.
-<code>LO_build
+<code>/LO_build
 ├── libreoffice-6.3.3.2
 │   ├── workdir_for_build
     ├── workdir			# for host build
@@ -555,8 +582,10 @@ The cross compilation builds for the BUILD platform as well as the HOST platform
 </code>
 That BUILD platform data can be used for a further HOST platform build, for example build for aarch64 after an armv7 build.
 <code>x86_64 BUILD platform build &DoubleRightArrow; armv7 HOST platform build &DoubleRightArrow; armv7 package
-                            &rdsh; remove HOST data &hellip;
+                            &rdsh; remove HOST compiled data &hellip;
                             &rdsh; aarch64 HOST platform build &DoubleRightArrow; aarch64 package
+                            <span class="comment">&rdsh; remove HOST compiled data &hellip;
+                            &rdsh; i686 HOST platform build &DoubleRightArrow; i686 package</span>
 </code>
 This can result in a significant time saving - built on a 2x quad-core 3GHz machine, the initial armv7 build was ~196 minutes, and by retaining the 'workdir_for_build' and the 'instdir_for_build', the build time was halved for an aarch64 build to ~103 minutes. An x86_64 native only build was ~107 minutes.
 
